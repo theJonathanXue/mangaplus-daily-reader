@@ -1,6 +1,8 @@
+"use client";
+
+import { useState, useEffect } from 'react';
 import { auth, signOut } from 'app/auth';
 import { getAllMangaList, getAllUserMangaList, deleteUserMangaByTitle, insertUserManga } from 'app/db';
-import { useState, useEffect } from 'react';
 
 export default function ProtectedPage() {
   const [session, setSession] = useState(null);
