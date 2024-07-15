@@ -41,7 +41,7 @@ async function ensureTableExists(tableName: string, createTableSQL: string) {
     );`;
 
   if (!result[0].exists) {
-    await client.raw(createTableSQL);
+    await client.unsafe(createTableSQL);
   }
 }
 
@@ -95,19 +95,19 @@ export async function createUser(email: string, password: string) {
 // Get All Manga List
 export async function getAllMangaList() {
   await ensureMangaListTableExists();
-  return await db.select().from(mangaListTable);
+  return await db.select().from(manga_list);
 }
 
 // Get All User Manga List
 export async function getAllUserMangaList(userId: number) {
   await ensureUserMangaListTableExists();
-  return await db.select().from(userMangaListTable).where(eq(userMangaListTable.user_id, userId));
+  return await db.select().from(user_manga_list).where(eq(user_manga_list.user_id, userId));
 }
 
 // Delete User Manga by Title
 export async function deleteUserMangaByTitle(userId: number, mangaTitle: string) {
   await ensureUserMangaListTableExists();
-  return await db.delete(userMangaListTable).where(
+  return await db.delete(user_manga_list).where(
     and(
       eq(userMangaListTable.user_id, userId),
       eq(userMangaListTable.manga_title, mangaTitle)
@@ -118,5 +118,5 @@ export async function deleteUserMangaByTitle(userId: number, mangaTitle: string)
 // Insert User Manga
 export async function insertUserManga(userId: number, mangaTitle: string) {
   await ensureUserMangaListTableExists();
-  return await db.insert(userMangaListTable).values({ user_id: userId, manga_title: mangaTitle });
+  return await db.insert(user_manga_list).values({ user_id: userId, manga_title: mangaTitle });
 }
