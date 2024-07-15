@@ -1,130 +1,122 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import { pgTable, serial, varchar, text, integer } from 'drizzle-orm/pg-core';
-import { eq } from 'drizzle-orm';
+import { eq, and } from 'drizzle-orm';
 import postgres from 'postgres';
 import { genSaltSync, hashSync } from 'bcrypt-ts';
 
-// Optionally, if not using email/pass login, you can
-// use the Drizzle adapter for Auth.js / NextAuth
-// https://authjs.dev/reference/adapter/drizzle
-let client = postgres(`${process.env.POSTGRES_URL!}?sslmode=require`);
-let db = drizzle(client);
+// Database client setup
+const client = postgres(`${process.env.POSTGRES_URL!}?sslmode=require`);
+const db = drizzle(client);
 
-export async function getUser(email: string) {
-  const users = await ensureTableExists();
-  return await db.select().from(users).where(eq(users.email, email));
-}
+// User Table Schema
+const usersTable = pgTable('User', {
+  id: serial('id').primaryKey(),
+  email: varchar('email', { length: 64 }).notNull(),
+  password: varchar('password', { length: 64 }).notNull(),
+});
 
-export async function createUser(email: string, password: string) {
-  const users = await ensureTableExists();
-  let salt = genSaltSync(10);
-  let hash = hashSync(password, salt);
+// Manga List Table Schema
+const mangaListTable = pgTable('manga_list', {
+  title: text('title').primaryKey(),
+  cover_src: text('cover_src').notNull(),
+  title_src: text('title_src').notNull(),
+  latest_chapter_src: text('latest_chapter_src').notNull(),
+  latest_chapter_date: text('latest_chapter_date').notNull(),
+  update_day_of_week: text('update_day_of_week'),
+});
 
-  return await db.insert(users).values({ email, password: hash });
-}
+// User Manga List Table Schema
+const userMangaListTable = pgTable('user_manga_list', {
+  user_id: integer('user_id').primaryKey(),
+  manga_title: text('manga_title').primaryKey(),
+});
 
-async function ensureTableExists() {
+// Ensure tables exist
+async function ensureTableExists(tableName: string, createTableSQL: string) {
   const result = await client`
     SELECT EXISTS (
       SELECT FROM information_schema.tables 
       WHERE table_schema = 'public' 
-      AND table_name = 'User'
+      AND table_name = ${tableName}
     );`;
 
   if (!result[0].exists) {
-    await client`
-      CREATE TABLE "User" (
-        id SERIAL PRIMARY KEY,
-        email VARCHAR(64),
-        password VARCHAR(64)
-      );`;
+    await client.raw(createTableSQL);
   }
-
-  const table = pgTable('User', {
-    id: serial('id').primaryKey(),
-    email: varchar('email', { length: 64 }),
-    password: varchar('password', { length: 64 }),
-  });
-
-  return table;
 }
 
-export async function getAllMangaList() {
-  const manga_list = await ensureMangaListTableExists();
-  return await db.select().from(manga_list));
+// Ensure User Table Exists
+async function ensureUserTableExists() {
+  await ensureTableExists('User', `
+    CREATE TABLE "User" (
+      id SERIAL PRIMARY KEY,
+      email VARCHAR(64) NOT NULL,
+      password VARCHAR(64) NOT NULL
+    );`);
 }
 
+// Ensure Manga List Table Exists
 async function ensureMangaListTableExists() {
-  const result = await client`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'manga_list'
-    );`;
-
-  if (!result[0].exists) {
-    await client`
-      CREATE TABLE "manga_list" (
-        title TEXT PRIMARY KEY, 
-        cover_src TEXT NOT NULL, 
-        title_src TEXT NOT NULL, 
-        latest_chapter_src TEXT NOT NULL, 
-        latest_chapter_date TEXT NOT NULL, 
-        update_day_of_week TEXT
-      );`;
-  }
-
-  const table = pgTable('manga_list', {
-    title: text('title').primaryKey(),
-    cover_src: TEXT('cover_src').notNull(),
-    title_src: TEXT('title_src').notNull(),
-    latest_chapter_src: TEXT('latest_chapter_src').notNull(),
-    latest_chapter_date: TEXT('latest_chapter_date').notNull(),
-    update_day_of_week: TEXT('update_day_of_week'),
-  });
-
-  return table;
+  await ensureTableExists('manga_list', `
+    CREATE TABLE "manga_list" (
+      title TEXT PRIMARY KEY, 
+      cover_src TEXT NOT NULL, 
+      title_src TEXT NOT NULL, 
+      latest_chapter_src TEXT NOT NULL, 
+      latest_chapter_date TEXT NOT NULL, 
+      update_day_of_week TEXT
+    );`);
 }
 
-export async function getAllUserMangaList(id: integer) {
-  const user_manga_list = await ensureUserMangaListTableExists();
-  return await db.select().from(user_manga_list).where(eq(users.id, id));
-}
-
+// Ensure User Manga List Table Exists
 async function ensureUserMangaListTableExists() {
-  const result = await client`
-    SELECT EXISTS (
-      SELECT FROM information_schema.tables 
-      WHERE table_schema = 'public' 
-      AND table_name = 'user_manga_list'
-    );`;
-
-  if (!result[0].exists) {
-    await client`
-      CREATE TABLE user_manga_list (
-        user_id INTEGER REFERENCES "User"(id),
-        manga_title TEXT REFERENCES manga_list(title),
-        PRIMARY KEY (user_id, manga_title)
-      );`;
-  }
-
-  const table = pgTable('user_manga_list', {
-    user_id: INTEGER('user_id').primaryKey(),
-    manga_title: TEXT('manga_title').primaryKey(),
-  });
-
-  return table;
+  await ensureTableExists('user_manga_list', `
+    CREATE TABLE user_manga_list (
+      user_id INTEGER REFERENCES "User"(id),
+      manga_title TEXT REFERENCES manga_list(title),
+      PRIMARY KEY (user_id, manga_title)
+    );`);
 }
 
-export async function deleteUserMangaBytitle(user_id: integer, manga_title: string) {
-  await db.delete(user_manga_list).where(
+// Get User
+export async function getUser(email: string) {
+  await ensureUserTableExists();
+  return await db.select().from(usersTable).where(eq(usersTable.email, email));
+}
+
+// Create User
+export async function createUser(email: string, password: string) {
+  await ensureUserTableExists();
+  const salt = genSaltSync(10);
+  const hash = hashSync(password, salt);
+  return await db.insert(usersTable).values({ email, password: hash });
+}
+
+// Get All Manga List
+export async function getAllMangaList() {
+  await ensureMangaListTableExists();
+  return await db.select().from(mangaListTable);
+}
+
+// Get All User Manga List
+export async function getAllUserMangaList(userId: number) {
+  await ensureUserMangaListTableExists();
+  return await db.select().from(userMangaListTable).where(eq(userMangaListTable.user_id, userId));
+}
+
+// Delete User Manga by Title
+export async function deleteUserMangaByTitle(userId: number, mangaTitle: string) {
+  await ensureUserMangaListTableExists();
+  return await db.delete(userMangaListTable).where(
     and(
-      eq(user_manga_list.user_id, user_id),
-      eq(user_manga_list.manga_title, manga_title)
+      eq(userMangaListTable.user_id, userId),
+      eq(userMangaListTable.manga_title, mangaTitle)
     )
   );
 }
 
-export async function insertUserManga(user_id: integer, manga_title: string) => {
-  return db.insert(user_manga_list).values({ user_id, manga_title });
+// Insert User Manga
+export async function insertUserManga(userId: number, mangaTitle: string) {
+  await ensureUserMangaListTableExists();
+  return await db.insert(userMangaListTable).values({ user_id: userId, manga_title: mangaTitle });
 }
