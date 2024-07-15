@@ -1,8 +1,9 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { auth, signOut } from 'app/auth';
+import { auth } from 'app/auth';
 import { getAllMangaList, getAllUserMangaList, deleteUserMangaByTitle, insertUserManga } from 'app/db';
+import { handleSignOut } from 'app/serverActions'; // Import the server action
 
 export default function ProtectedPage() {
   const [session, setSession] = useState(null);
@@ -77,10 +78,7 @@ export default function ProtectedPage() {
 function SignOut() {
   return (
     <form
-      action={async () => {
-        'use server';
-        await signOut();
-      }}
+      action={handleSignOut}
     >
       <button type="submit">Sign out</button>
     </form>
