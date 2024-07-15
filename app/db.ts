@@ -54,7 +54,7 @@ export async function getAllMangaList() {
   return await db.select().from(manga_list));
 }
 
-async function ensureTableExists() {
+async function ensureMangaListTableExists() {
   const result = await client`
     SELECT EXISTS (
       SELECT FROM information_schema.tables 
@@ -104,7 +104,7 @@ async function ensureUserMangaListTableExists() {
       CREATE TABLE user_manga_list (
         user_id INTEGER REFERENCES "User"(id),
         manga_title TEXT REFERENCES manga_list(title),
-        PRIMARY KEY (user_id, manga_title )
+        PRIMARY KEY (user_id, manga_title)
       );`;
   }
 
