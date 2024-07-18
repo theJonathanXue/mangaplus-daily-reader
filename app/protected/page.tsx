@@ -1,64 +1,66 @@
-"use client"
+import { GetServerSideProps } from 'next';
+import { auth } from 'app/auth';
+import { getAllMangaList, getAllUserMangaList, insertUserManga, deleteUserMangaByTitle } from 'app/db';
+
+export const getServerSideProps: GetServerSideProps = async (context) => {
+  const session = await auth(context.req, context.res);
   
-import { useState, useEffect } from 'react';
-import { auth, signOut } from 'app/auth';
+  if (!session) {
+    return {
+      redirect: {
+        destination: '/login',
+        permanent: false,
+      },
+    };
+  }
 
-export default function ProtectedPage() {
-  const [session, setSession] = useState(null);
-  const [mangaList, setMangaList] = useState([]);
-  const [userMangaList, setUserMangaList] = useState([]);
+  const [mangaList, userMangaList] = await Promise.all([
+    getAllMangaList(),
+    getAllUserMangaList(session.user.id),
+  ]);
 
-  useEffect(() => {
-    async function fetchData() {
-      const sessionData = await auth();
-      console.log(sessionData)
-      setSession(sessionData);
-      if (sessionData?.user?.id) {
-        const [allMangaList, userManga] = await Promise.all([
-          fetch('/api/manga-list').then((res) => res.json()),
-          fetch(`/api/user-manga-list?userId=${sessionData.user.id}`).then((res) => res.json())
-        ]);
-        setMangaList(allMangaList);
-        setUserMangaList(userManga);
-      }
-    }
-    fetchData();
-  }, []);
+  return {
+    props: {
+      session,
+      mangaList,
+      userMangaList,
+    },
+  };
+};
 
+export default function ProtectedPage({ session, mangaList, userMangaList }) {
   async function handleMangaClick(mangaTitle) {
-    if (userMangaList.find(manga => manga.manga_title === mangaTitle)) {
+    const isInUserList = userMangaList.find((manga) => manga.manga_title === mangaTitle);
+    if (isInUserList) {
       await fetch('/api/remove-user-manga', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session.user.id, mangaTitle })
+        body: JSON.stringify({ userId: session.user.id, mangaTitle }),
       });
     } else {
       await fetch('/api/add-user-manga', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: session.user.id, mangaTitle })
+        body: JSON.stringify({ userId: session.user.id, mangaTitle }),
       });
     }
-    const updatedUserManga = await fetch(`/api/user-manga-list?userId=${session.user.id}`).then((res) => res.json());
-    setUserMangaList(updatedUserManga);
+    // Ideally, re-fetch user manga list here and update state
   }
 
   async function checkLatestChapters() {
     const today = new Date().toISOString().split('T')[0];
-    userMangaList.forEach(manga => {
+    userMangaList.forEach((manga) => {
       if (manga.latest_chapter_date === today) {
         window.open(manga.latest_chapter_src, '_blank');
       }
     });
   }
 
-  if (!session) return <div>Loading...</div>;
-
   return (
     <div className="flex h-screen bg-black">
       <div className="w-screen h-screen flex flex-col space-y-5 justify-center items-center text-white">
-        You are logged in as {session?.user?.email}
-        Your id is {session?.user?.id}
+        You are logged in as {session.user.email}
+        Your id is {session.user.id}
 
         <div className="carousel">
           {userMangaList.map((manga, index) => (
@@ -81,4 +83,3 @@ export default function ProtectedPage() {
     </div>
   );
 }
-
