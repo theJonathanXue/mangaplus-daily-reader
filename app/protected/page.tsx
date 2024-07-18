@@ -1,5 +1,3 @@
-"use client";
-
 import { useState, useEffect } from 'react';
 import { auth, signOut } from 'app/auth';
 
@@ -11,6 +9,7 @@ export default function ProtectedPage() {
   useEffect(() => {
     async function fetchData() {
       const sessionData = await auth();
+      console.log(sessionData)
       setSession(sessionData);
       if (sessionData?.user?.id) {
         const [allMangaList, userManga] = await Promise.all([
