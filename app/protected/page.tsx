@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { auth } from 'app/auth';
-import { getAllMangaList, getAllUserMangaList, deleteUserMangaByTitle, insertUserManga } from 'app/db';
-import { handleSignOut } from 'app/serverActions'; // Import the server action
+import { handleSignOut } from 'app/serverActions';
 
 export default function ProtectedPage() {
   const [session, setSession] = useState(null);
@@ -15,8 +14,10 @@ export default function ProtectedPage() {
       const sessionData = await auth();
       setSession(sessionData);
       if (sessionData?.user?.id) {
-        const allMangaList = await getAllMangaList();
-        const userManga = await getAllUserMangaList(sessionData.user.id);
+        const [allMangaList, userManga] = await Promise.all([
+          fetch('/api/manga-list').then((res) => res.json()),
+          fetch(`/api/user-manga-list?userId=${sessionData.user.id}`).then((res) => res.json())
+        ]);
         setMangaList(allMangaList);
         setUserMangaList(userManga);
       }
@@ -26,11 +27,19 @@ export default function ProtectedPage() {
 
   async function handleMangaClick(mangaTitle) {
     if (userMangaList.find(manga => manga.manga_title === mangaTitle)) {
-      await deleteUserMangaByTitle(session.user.id, mangaTitle);
+      await fetch('/api/remove-user-manga', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id, mangaTitle })
+      });
     } else {
-      await insertUserManga(session.user.id, mangaTitle);
+      await fetch('/api/add-user-manga', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: session.user.id, mangaTitle })
+      });
     }
-    const updatedUserManga = await getAllUserMangaList(session.user.id);
+    const updatedUserManga = await fetch(`/api/user-manga-list?userId=${session.user.id}`).then((res) => res.json());
     setUserMangaList(updatedUserManga);
   }
 
