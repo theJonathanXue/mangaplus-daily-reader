@@ -1,3 +1,5 @@
+"use client"
+  
 import { useState, useEffect } from 'react';
 import { auth, signOut } from 'app/auth';
 
@@ -58,8 +60,6 @@ export default function ProtectedPage() {
         You are logged in as {session?.user?.email}
         Your id is {session?.user?.id}
 
-        <SignOut />
-
         <div className="carousel">
           {userMangaList.map((manga, index) => (
             <div key={index} className="carousel-item">
@@ -82,15 +82,3 @@ export default function ProtectedPage() {
   );
 }
 
-function SignOut() {
-  return (
-    <form
-      action={async () => {
-        'use server';
-        await signOut();
-      }}
-    >
-      <button type="submit">Sign out</button>
-    </form>
-  );
-}
