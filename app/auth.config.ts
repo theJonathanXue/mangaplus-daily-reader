@@ -1,4 +1,4 @@
-import { NextAuthConfig } from 'next-auth';
+import { NextAuthConfig } from 'next-auth'
 
 export const authConfig = {
   pages: {
@@ -10,17 +10,25 @@ export const authConfig = {
   ],
   callbacks: {
     authorized({ auth, request: { nextUrl } }) {
-      let isLoggedIn = !!auth?.user;
-      let isOnDashboard = nextUrl.pathname.startsWith('/protected');
+      let isLoggedIn = !!auth?.user
+      let isOnDashboard = nextUrl.pathname.startsWith('/manga_list')
 
       if (isOnDashboard) {
-        if (isLoggedIn) return true;
-        return false; // Redirect unauthenticated users to login page
+        if (isLoggedIn) return true
+        return false // Redirect unauthenticated users to login page
       } else if (isLoggedIn) {
-        return Response.redirect(new URL('/protected', nextUrl));
+        return Response.redirect(new URL('/manga_list', nextUrl))
       }
 
-      return true;
+      return true
     },
+    session: ({ session, token }) => ({
+      ...session,
+      user: {
+        ...session.user,
+        id: token.sub,
+      },
+    }),
   },
-} satisfies NextAuthConfig;
+  secret: process.env.AUTH_SECRET,
+} satisfies NextAuthConfig
