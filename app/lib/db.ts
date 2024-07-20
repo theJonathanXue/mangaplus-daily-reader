@@ -7,7 +7,7 @@ import {
   integer,
   unique,
 } from 'drizzle-orm/pg-core'
-import { eq, and } from 'drizzle-orm'
+import { eq, and, desc } from 'drizzle-orm'
 import postgres from 'postgres'
 import { genSaltSync, hashSync } from 'bcrypt-ts'
 
@@ -32,7 +32,10 @@ export async function createUser(email: string, password: string) {
 }
 
 export async function getAllMangaList() {
-  return db.select().from(mangaListTable)
+  return db
+    .select()
+    .from(mangaListTable)
+    .orderBy(desc(mangaListTable.latest_chapter_date))
 }
 
 const mangaListTable = pgTable('manga_list', {

@@ -1,6 +1,6 @@
 'use server'
 
-import { deleteUserMangaByTitle, insertUserMangaTitle } from '../lib/db'
+import { deleteUserMangaByTitle, insertUserMangaTitle } from '../../lib/db'
 
 export async function deleteUserManga(userId: number, mangaTitle: string) {
   await deleteUserMangaByTitle(userId, mangaTitle)

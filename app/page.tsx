@@ -36,7 +36,7 @@ export default function Page() {
         </div>
         <div className='flex space-x-3'>
           <Link
-            href='/manga_list'
+            href='/manga'
             className='text-stone-400 underline hover:text-stone-200 transition-all'
           >
             Sign In

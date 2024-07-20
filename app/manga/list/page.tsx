@@ -1,10 +1,13 @@
-import { auth, signOut } from 'app/auth'
-import { getAllMangaList, getAllUserMangaList } from '../lib/db'
-import Navbar from '../components/Navbar'
-import UserMangaList from './userMangaList'
+import { auth } from 'app/auth'
+import { getAllMangaList, getAllUserMangaList } from '../../lib/db'
+import MangaList from './mangaList'
 
 export default async function MangaListPage() {
   let session = await auth()
+
+  if (!session) {
+    return <p className='mt-4 text-gray-400'>No data available.</p>
+  }
   const [userMangaList, mangaList] = await Promise.all([
     getAllUserMangaList(parseInt(session?.user?.id!)),
     getAllMangaList(),
@@ -15,9 +18,8 @@ export default async function MangaListPage() {
   }
 
   return (
-    <div className='flex flex-col  bg-black'>
-      <Navbar />
-      <UserMangaList
+    <div className='flex flex-col  bg-black font-roboto'>
+      <MangaList
         mangaList={mangaList}
         userMangaList={userMangaList}
         userId={parseInt(session?.user?.id!)}
